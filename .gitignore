@@ -1,2 +1,4 @@
-/.idea/
-/rewe_discounts/Angebote Rewe.md
+.venv
+/rewe_discounts/test.md
+/rewe_discounts/private.key
+/rewe_discounts/private.pem

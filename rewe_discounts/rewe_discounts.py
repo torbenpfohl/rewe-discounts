@@ -6,9 +6,10 @@ import datetime
 import time
 import traceback
 from requests import JSONDecodeError, ConnectionError, ConnectTimeout
+import uuid
+import requests
 
-import cloudscraper
-
+categories_id_mapping = dict()
 
 class Product:
     """
@@ -128,28 +129,42 @@ def custom_exit(message):
 
 def print_market_ids(zip_code):
     # Craft query and load JSON stuff.
-    url = 'https://www.rewe.de/api/marketsearch?searchTerm=' + zip_code
-    try:
-        data = scraper.get(url).json()
-        if data['error']:
-            custom_exit('FAIL: Unknown error while fetching market list from {}, '
-                        'maybe a typo or the server rejected the request:'
-                        '{}'.format(url, data['error']))
-    except (JSONDecodeError, ConnectionError, ConnectTimeout):
-        custom_exit('FAIL: Unknown error while fetching market list from {}, '
-                    'maybe a typo or the server rejected the request.'.format(url))
-    except (KeyError, TypeError):  # data got retrieved successfully
-        pass
-
-    markets = data
+    client_cert = "./private.pem"
+    client_key = "./private.key"
+    hostname = "mobile-api.rewe.de"
+    url = "https://" + hostname + "/api/v3/market/search?search=" + str(zip_code)
+    rdfa_uuid = str(uuid.uuid4())
+    correlation_id_uuid = str(uuid.uuid4())
+    header = {
+        "ruleVersion": "2",
+        "user-agent": "REWE-Mobile-Client/3.17.1.32270 Android/11 Phone/Google_sdk_gphone_x86_64",
+        "rdfa": rdfa_uuid,  #"d53d57e6-1f5a-4112-94aa-d900c1dc1556",
+        "Correlation-Id": correlation_id_uuid,  #"c0147af1-8f04-49e8-b573-425c33b963b1",
+        "rd-service-types": "UNKNOWN",
+        "x-rd-service-types": "UNKNOWN",
+        "rd-is-lsfk": "false",
+        "rd-customer-zip": "",
+        "rd-postcode": "",
+        "x-rd-customer-zip": "",
+        "rd-market-id": "",
+        "x-rd-market-id": "",
+        "a-b-test-groups": "productlist-citrusad",
+        "Host": hostname,
+        "Connection": "Keep-Alive",
+        "Accept-Encoding": "gzip"
+        }
+    res = requests.get(url, headers=header, cert=(client_cert, client_key))
+    res = res.json()
+    
+    markets = res["markets"]
 
     if not markets:
         custom_exit('FAIL: No markets found near provided zip code "{}".'.format(zip_code))
 
     print('  ID     Location')
     for market in markets:
-        print('{}: {}, {}, {} {}'.format(market['wwIdent'], market['companyName'], market['contactStreet'],
-                                         market['contactZipCode'], market['contactCity']))
+        print('{}: {}, {}, {} {}'.format(market['id'], market['name'], market['addressLine1'],
+                                         market['rawValues']['postalCode'], market['rawValues']['city']))
     print('\nPlease choose the right market and its ID from above.\n\n'
           'Example program call to fetch all discounts from a market:\n'
           '  rewe_discounts.py --market-id ID --output-file "Angebote Rewe.md"')
@@ -175,18 +190,38 @@ def load_product_highlights():
 
 
 def elegant_query(market_id):
-    url = 'https://mobile-api.rewe.de/api/v3/all-offers?marketCode=' + market_id
-    data = scraper.get(url).json()
-
-    if data['error']:
-        custom_exit('FAIL: Unknown error while fetching discounts from {}, '
-                    'maybe a typo or the server rejected the request:'
-                    '{}'.format(url, data['error']))
+    client_cert = "./private.pem"
+    client_key = "./private.key"
+    hostname = "mobile-clients-api.rewe.de"
+    url = "https://" + hostname + "/api/stationary-app-offers/" + str(market_id)
+    rdfa_uuid = str(uuid.uuid4())
+    correlation_id_uuid = str(uuid.uuid4())
+    header = {
+        # "ruleVersion": "2",
+        "user-agent": "REWE-Mobile-Client/3.17.1.32270 Android/11 Phone/Google_sdk_gphone_x86_64",
+        "rdfa": rdfa_uuid,  #"d53d57e6-1f5a-4112-94aa-d900c1dc1556",
+        "Correlation-Id": correlation_id_uuid,  #"c0147af1-8f04-49e8-b573-425c33b963b1",
+        "rd-service-types": "UNKNOWN",
+        "x-rd-service-types": "UNKNOWN",
+        "rd-is-lsfk": "false",
+        "rd-customer-zip": "",
+        "rd-postcode": "",
+        "x-rd-customer-zip": "",
+        "rd-market-id": "",
+        "x-rd-market-id": "",
+        "a-b-test-groups": "productlist-citrusad",
+        "Host": hostname,
+        "Connection": "Keep-Alive",
+        "Accept-Encoding": "gzip",
+        }
+    res = requests.get(url, headers=header, cert=(client_cert, client_key))
+    res = res.json()
+    data = res["data"]["offers"]
 
     # Reformat categories for easier access. ! are highlighted products, and ? are uncategorized ones.
     # Order of definition here determines printing order later on.
     categories = data['categories']
-    categories_id_mapping = {'!': 'Vorgemerkte Produkte'}
+    categories_id_mapping.update({'!': 'Vorgemerkte Produkte'})
     categorized_products = {'!': []}
     for n in range(0, len(categories)):
         if 'PAYBACK' in categories[n]['title']:  # ignore payback offers
@@ -210,6 +245,9 @@ def elegant_query(market_id):
             n += 1
             continue
         for item in category['offers']:
+            # Some lines are for banners. Probably item['cellType'] == 'MOOD', but item['title'] == "" is safer.
+            if item['title'] == "":
+                continue
             NewProduct = Product()
             try:
                 NewProduct.name = item['title']
@@ -262,108 +300,6 @@ def elegant_query(market_id):
             sum([len(categorized_products[x]) for x in categorized_products]), output_file))
     sys.exit(0)
 
-
-# If the less elegant approach is used, we get different API output and need to process each product individually
-def get_product_details(Product):
-    url = 'https://www.rewe.de/api/offer-details/{}?wwIdent={}'.format(Product.id, market_id)
-    try:
-        item = scraper.get(url).json()
-        time.sleep(0.02)  # without any sleep, we run into 429 errors, 0.02 s works for now
-    except JSONDecodeError:  # Maye a timeout/load issue, retrying silently
-        print('INFO: Error while retrieving, possible timeout issue, continuing in 60 seconds...')
-        time.sleep(60)
-        item = scraper.get(url).json()
-    Product.name = item['product']['description']
-    Product.price = str(int(item['pricing']['priceInCent']) / 100)
-    Product.discount_valid = item['validUntil']
-    try:  # Sometimes we need to fetch information about base price from different keys
-        if item['pricing']['basePrice']:
-            Product.base_price = item['pricing']['basePrice']
-        elif item['drippedOffWeight']:
-            Product.base_price = item['drippedOffWeight']
-        elif item['amount']:
-            Product.base_price = item['amount']
-    except:
-        Product.base_price = 'Unbekannt.'
-
-
-# When the single query approach fails...
-def less_elegant_query(market_id):
-    url = 'https://www.rewe.de/api/all-stationary-offers/' + market_id
-    try:
-        data = scraper.get(url).json()
-    except (JSONDecodeError, ConnectionError, ConnectTimeout):
-        custom_exit('FAIL: Unknown error while fetching discounts from {}, '
-                    'maybe a typo or the server rejected the request.'.format(url))
-
-    try:
-        for filter in data['filters']:
-            if filter['id'] == 'no-price-filter':
-                data_filtered = filter['categories']
-    except:
-        custom_exit('FAIL: In the returned query, no data was found. The API output seems to have changed and the '
-                    'code needs to be adjusted.')
-
-    # Check and process highlights file
-    product_highlights = load_product_highlights()
-
-    offers_valid_date = None
-    categorized_products = {'Vorgemerkte Produkte': []}
-
-    # Stores product data in a dict with categories as keys for a sorted printing experience.
-    # Sometimes the data from Rewe is mixed/missing, so that's why we need all those try/excepts.
-    for category in data_filtered:
-        if 'payback' in category['id']:  # ignore payback offers
-            continue
-        categorized_products.update({category['id']: []})
-        for item in category['offers']:
-            NewProduct = Product()
-            NewProduct.id = item['id']
-            NewProduct.category = category['id']
-            get_product_details(NewProduct)
-            if not offers_valid_date:  # randomly determine the discount valid date by the first product
-                offers_valid_date = NewProduct.discount_valid
-            # Move product into the respective category list ...
-            try:
-                categorized_products[category['id']].append(NewProduct)
-            except KeyError:
-                categorized_products['Unbekannt'].append(NewProduct)
-            # ... but highlighted products are the only ones in two categories
-            if any(x in NewProduct.name for x in product_highlights):
-                categorized_products['Vorgemerkte Produkte'].append(NewProduct)
-    categorized_products.update({'Unbekannt': []})
-
-    # Writes product list grouped by categories to file, and cleans file first
-    with open(output_file, 'w') as file:
-        file.truncate(0)
-        for category_name in categorized_products:
-            if category_name == 'Vorgemerkte Produkte':
-                header = '# Vorgemerkte Produkte\nAlle Angebote gültig bis {}.\n\n'.format(offers_valid_date)
-            else:
-                header = '# {}\n\n'.format(category_name)
-            file.write(header)
-            for product in categorized_products[category_name]:
-                file.write('**{}**\n'.format(product.name))
-                file.write('- {} {}\n'.format(product.price, product.currency))
-                file.write("- {}\n".format(product.base_price))
-                if product.discount_valid != offers_valid_date:
-                    file.write("- {}\n".format(product.discount_valid))
-                file.write('\n')
-            file.write('\n')
-        file.write("Update: {}".format(datetime.datetime.now()))
-
-    if product_highlights:
-        print('OK: Wrote {} discounts to file "{}" and highlighted {}.'.format(
-            sum([len(categorized_products[x]) for x in categorized_products]) -
-            len(categorized_products['Vorgemerkte Produkte']),
-            output_file,
-            sum([len(categorized_products['Vorgemerkte Produkte'])])))
-    else:
-        print('OK: Wrote {} discounts to file "{}".'.format(
-            sum([len(categorized_products[x]) for x in categorized_products]), output_file))
-    sys.exit(0)
-
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
@@ -388,8 +324,6 @@ if __name__ == '__main__':
     market_id = args.market_id
     output_file = args.output_file
     highlight_file = args.highlights
-
-    scraper = cloudscraper.create_scraper()
 
     # Here we differentiate between mode "print market IDs" and mode "print offers of selected market"
     if args.list_markets:  # mode "print market IDs"
@@ -422,7 +356,7 @@ if __name__ == '__main__':
         except (JSONDecodeError, ConnectionError, ConnectTimeout):
             print('INFO: Unknown error while fetching discounts, '
                   'using less-elegant approach now.')
-            less_elegant_query(market_id)
+            # less_elegant_query(market_id)
         except (KeyError, TypeError):  # data got retrieved successfully
             pass
 
