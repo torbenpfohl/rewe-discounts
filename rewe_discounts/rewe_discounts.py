@@ -1,13 +1,24 @@
 #!/usr/bin/python3
 
+import os
 import sys
 import argparse
 import datetime
 import time
 import traceback
+from pathlib import Path
+
+import requests
 from requests import JSONDecodeError, ConnectionError, ConnectTimeout
 import uuid
-import requests
+
+from get_creds import get_creds
+
+PRIVATE_KEY_FILENAME = "private.key"
+CERTIFICATE_FILENAME = "private.pem"
+SOURCE_PATH = Path(__file__).resolve().parent
+FULL_KEY_FILE_PATH = os.path.join(SOURCE_PATH, PRIVATE_KEY_FILENAME)
+FULL_CERT_FILE_PATH = os.path.join(SOURCE_PATH, CERTIFICATE_FILENAME)
 
 categories_id_mapping = dict()
 
@@ -129,8 +140,13 @@ def custom_exit(message):
 
 def print_market_ids(zip_code):
     # Craft query and load JSON stuff.
-    client_cert = "./private.pem"
-    client_key = "./private.key"
+    
+    files = os.listdir(SOURCE_PATH)
+    if PRIVATE_KEY_FILENAME not in files or CERTIFICATE_FILENAME not in files:
+        get_creds(source_path=SOURCE_PATH, key_filename=PRIVATE_KEY_FILENAME, cert_filename=CERTIFICATE_FILENAME)
+    
+    client_cert = FULL_CERT_FILE_PATH
+    client_key = FULL_KEY_FILE_PATH
     hostname = "mobile-api.rewe.de"
     url = "https://" + hostname + "/api/v3/market/search?search=" + str(zip_code)
     rdfa_uuid = str(uuid.uuid4())
@@ -190,8 +206,13 @@ def load_product_highlights():
 
 
 def elegant_query(market_id):
-    client_cert = "./private.pem"
-    client_key = "./private.key"
+
+    files = os.listdir(SOURCE_PATH)
+    if PRIVATE_KEY_FILENAME not in files or CERTIFICATE_FILENAME not in files:
+        get_creds(source_path=SOURCE_PATH, key_filename=PRIVATE_KEY_FILENAME, cert_filename=CERTIFICATE_FILENAME)
+    
+    client_cert = FULL_CERT_FILE_PATH
+    client_key = FULL_KEY_FILE_PATH
     hostname = "mobile-clients-api.rewe.de"
     url = "https://" + hostname + "/api/stationary-app-offers/" + str(market_id)
     rdfa_uuid = str(uuid.uuid4())
@@ -302,6 +323,10 @@ def elegant_query(market_id):
 
 if __name__ == '__main__':
 
+    files = os.listdir(SOURCE_PATH)
+    if PRIVATE_KEY_FILENAME not in files or CERTIFICATE_FILENAME not in files:
+        get_creds(source_path=SOURCE_PATH, key_filename=PRIVATE_KEY_FILENAME, cert_filename=CERTIFICATE_FILENAME)
+
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='Fetches current Rewe discount offers for a specific market.',
@@ -354,9 +379,7 @@ if __name__ == '__main__':
         try:
             elegant_query(market_id)
         except (JSONDecodeError, ConnectionError, ConnectTimeout):
-            print('INFO: Unknown error while fetching discounts, '
-                  'using less-elegant approach now.')
-            # less_elegant_query(market_id)
+            print('INFO: Unknown error while fetching discounts.')
         except (KeyError, TypeError):  # data got retrieved successfully
             pass
 

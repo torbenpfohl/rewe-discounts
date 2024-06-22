@@ -1,3 +1,7 @@
+# Einleitung
+
+Nach Änderungen von Rewe (siehe [#19](https://github.com/foo-git/rewe-discounts/issues/19)) braucht es nun einen privaten Schlüssel und ein Zertifikat. Beide sind in der Rewe APK zu finden. get_creds.py ist der Versuch das Extrahieren zu automatisieren. Bitte mit Bedacht nutzen.
+
 # Rewe Discounts
 
 Dieses Programm sucht mittels der Rewe-API für einen bestimmten Rewe-Markt die aktuellen
@@ -12,8 +16,8 @@ neuen Angebote herunter, und speichert sie als Notiz in einer Nextcloud-Instanz
 zum komfortablen Abruf per Smartphone.
 
 ## Abhängigkeiten (Dependencies)
-Die einzige externe Abhängigkeit ist zur Abfrage der Rewe API nötig, und damit Cloudflare die Anfrage durchlässt:
-- `$ pip install cloudscraper`
+- `$ pip install httpx[h2]`  Um die Rewe APK herunterzuladen und den privaten Schlüssel und das Zertifikat zu extrahieren. 
+- `$ pip install requests`   Anfragen an Rewe API.
 
 ## Verwendung (Usage)
 
