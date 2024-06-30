@@ -7,10 +7,11 @@ import datetime
 import time
 import traceback
 from pathlib import Path
+import uuid
 
+import httpx
 import requests
 from requests import JSONDecodeError, ConnectionError, ConnectTimeout
-import uuid
 
 from get_creds import get_creds
 
@@ -169,7 +170,7 @@ def print_market_ids(zip_code):
         "Connection": "Keep-Alive",
         "Accept-Encoding": "gzip"
         }
-    res = requests.get(url, headers=header, cert=(client_cert, client_key))
+    res = httpx.Client(http2=True, cert=(client_cert, client_key), headers=header).get(url)
     res = res.json()
     
     markets = res["markets"]
@@ -235,7 +236,7 @@ def elegant_query(market_id):
         "Connection": "Keep-Alive",
         "Accept-Encoding": "gzip",
         }
-    res = requests.get(url, headers=header, cert=(client_cert, client_key))
+    res = httpx.Client(http2=True, cert=(client_cert, client_key), headers=header).get(url)
     res = res.json()
     data = res["data"]["offers"]
 

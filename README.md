@@ -16,7 +16,7 @@ neuen Angebote herunter, und speichert sie als Notiz in einer Nextcloud-Instanz
 zum komfortablen Abruf per Smartphone.
 
 ## Abhängigkeiten (Dependencies)
-- `$ pip install httpx[h2]`  Um die Rewe APK herunterzuladen und den privaten Schlüssel und das Zertifikat zu extrahieren. 
+- `$ pip install httpx[http2]`  Um die Rewe APK herunterzuladen und den privaten Schlüssel und das Zertifikat zu extrahieren. 
 - `$ pip install requests`   Anfragen an Rewe API.
 
 ## Verwendung (Usage)
