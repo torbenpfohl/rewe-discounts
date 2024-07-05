@@ -36,7 +36,7 @@ def get_creds(source_path, key_filename, cert_filename):
   with httpx.Client(http2=True) as client:
     client.headers = headers
 
-    url = "https://rewe.de.uptodown.com/android/post-download"
+    url = "https://rewe.de.uptodown.com/android/download"
     res = client.get(url)
     pattern = r"data-url=\".+?\""
     all_data_patterns = re.findall(pattern, res.text)

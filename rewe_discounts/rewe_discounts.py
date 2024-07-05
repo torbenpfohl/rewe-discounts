@@ -10,7 +10,6 @@ from pathlib import Path
 import uuid
 
 import httpx
-import requests
 from requests import JSONDecodeError, ConnectionError, ConnectTimeout
 
 from get_creds import get_creds
