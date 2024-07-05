@@ -17,7 +17,8 @@ zum komfortablen Abruf per Smartphone.
 
 ## Abhängigkeiten (Dependencies)
 - `$ pip install httpx[http2]`  Um die Rewe APK herunterzuladen und den privaten Schlüssel und das Zertifikat zu extrahieren. 
-- `$ pip install requests`   Anfragen an Rewe API.
+- `$ pip install requests`   Error.
+- `$ pip install cryptography`   Verarbeiten der pfx-Datei.
 
 ## Verwendung (Usage)
 

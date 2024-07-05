@@ -2,4 +2,6 @@
 /rewe_discounts/test.md
 /rewe_discounts/private.key
 /rewe_discounts/private.pem
+/rewe_discounts/private_test.key
+/rewe_discounts/private_test.pem
 /rewe_discounts/__pycache__
