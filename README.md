@@ -54,3 +54,6 @@ Es lassen sich bestimmte Produkte auch hervorheben und an erster Stelle der Date
 Hierzu wird noch eine Textdatei angelegt, und pro Zeile ein Suchbegriff wie "Nudeln" oder "Joghurt" eingegeben:
 
 `rewe_discounts.py --market-id 562286 --output-file "Angebote Rewe.md" --highlights=highlights.txt`
+
+Ganz großes SORRY vorab, ich kenne mich mit Github nur ganz wenig aus und hoffe, hier kein zu großes Durcheinander zu erzeugen. Leider finde ich keinen anderen Weg, einen Kommentar loszuwerden. 
+Erst mal vielen Dank für das Script. Seit sich bei Rewe ohne Javascript die Seite nicht mehr duchsuchen läßt, kam das wie gerufen und funktioniert bestens. Bei Aldi/Lidl durchkämme ich seit längerem und noch erfolgreich die normale Webseite. Bei Penny.de und Netto-online.de oder auch Norma geht das leider gar nicht. Hast Du Dir das schon mal angesehen - gibt es eine ähnlich elegante Möglichkeit?
